@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Tuto WebSocket avec Socket.io et NodeJS par PracticalProgramming.fr</title>
+</head>
+
+<body>
+  <div id="app">
+    <div id="start">
+      <input type="text" id="pseudo" maxlength="10" />
+      <hr>
+      <button id="create">create game</button>
+      <hr>
+      <input type="text" id="game" maxlength="10" />
+      <button id="join">join game</button>
+    </div>
+    <div id="waiting">
+    </div>
+    <div id="game">
+    </div>
+  </div>
+
+  <!-- CREATION SOCKET -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    $(document).ready(function () {
+      let pseudo, code;
+      $('#create').click(function () {
+        $.ajax({
+          url: '/room',
+          type: 'POST',
+          success: function (data) {
+            pseudo = $('#pseudo').val();
+            code = data.game;
+            $('#start').empty();
+            $('#waiting').append("<p> Code de la game : " + code + "</p><div id=\"joueurs\"></div><button id=\"start-game\">Commencer</button>")
+            $('#start-game').click(function () {
+              socket.emit('start', { pseudo, code })
+            });
+            socket.emit('create', { pseudo: pseudo, game: code });
+          }
+        })
+      });
+
+      $('#join').click(function () {
+        code = $('#game').val();
+        pseudo = $('#pseudo').val();
+        socket.emit('join', { pseudo: pseudo, game: code });
+        $('#start').empty();
+        $('#waiting').append("<p> Code de la game : " + code + "</p><div id=\"joueurs\"></div>")
+      });
+
+
+
+      socket.on('joined', function (players) {
+        $('#joueurs').empty();
+        for (player of players) {
+          $('#joueurs').append("<p>" + player.pseudo + "</p>")
+        }
+      });
+
+      socket.on('left', function (players) {
+        $('#joueurs').empty();
+        console.log(players);
+        for (player of players) {
+          $('#joueurs').append("<p>" + player.pseudo + "</p>")
+        }
+      });
+
+      socket.on('started', function ({words, players}) {
+        $('#waiting').empty();
+        let t1 = players.filter(function(el) { return el.team === 0; });
+        let t2 = players.filter(function(el) { return el.team === 1; });
+        let c1 = t1[0];
+        let c2 = t2[0];
+        let js1 = '';
+        let js2 = '';
+
+        for(let i = 1; i < t1.length && i < t2.length; ++i) {
+          js1 += t1[i].pseudo + ' ';
+          js2 += t2[i].pseudo + ' ';
+        }
+
+        $('#game').append('<p style="color:blue;">' + c1.pseudo + ' fait deviner à ' + js1 + '</p>')
+        $('#game').append('<p style="color:red;">' + c2.pseudo + ' fait deviner à ' + js2 + '</p>')
+
+      });
+
+      
+
+
+    });
+  </script>
+  <script>
+  </script>
+
+  <!-- FIN CODE SOCKET -->
+</body>
+
+</html>
